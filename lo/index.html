@@ -1008,16 +1008,29 @@
     display: flex;
     }
     .tlt .dialog {
+    align-items: center;
     justify-content: center;
     width: 100svw;
     height: 100vh;
-    background-color: rgba(0, 0, 0, 0.5);
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 1rem;
+    box-sizing: border-box;
+    inset: 0;
+    background: transparent;
+    -webkit-backdrop-filter: blur(0.25rem);
     backdrop-filter: blur(0.25rem);
     border: none;
     z-index: 10;
     position: fixed;
     top: 0;
     left: 0;
+    }
+    .tlt dialog::backdrop {
+    background: rgba(0, 0, 0, 0.5);
+    -webkit-backdrop-filter: blur(0.25rem);
+    backdrop-filter: blur(0.25rem);
     }
     .tlt .dialog-close {
     text-indent: -9999em;
@@ -1033,7 +1046,7 @@
     left: 0;
     }
     .tlt .dialog-card {
-    margin-block: 2rem;
+    margin: 0;
     padding: 1.25rem;
     padding-right: 2.5rem;
     border-radius: 0.75rem;
@@ -1042,8 +1055,36 @@
     background-color: rgba(255, 255, 255, 0.75);
     min-width: 250px;
     max-width: 500px;
-    width: 100%;
+    width: min(100%, 500px);
     position: relative;
+    box-sizing: border-box;
+    }
+    .tlt .dialog-card-body {
+    color: #000;
+    font-size: 1rem;
+    line-height: 1.6;
+    }
+    .tlt .dialog-card-body p {
+    margin: 0;
+    }
+    .tlt .dialog-card-footer {
+    margin-top: 1.25rem;
+    display: flex;
+    justify-content: flex-end;
+    }
+    .tlt .dialog-primary {
+    min-width: 7rem;
+    padding: 0.75rem 1.25rem;
+    border: none;
+    border-radius: 999rem;
+    cursor: pointer;
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    background: #a04e63;
+    }
+    .tlt .dialog-primary:hover, .tlt .dialog-primary:focus {
+    background: #8d4357;
     }
     .tlt .dialog-card .dialog-close {
     padding: 0.25em;
@@ -1052,8 +1093,8 @@
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23000'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414'/%3e%3c/svg%3e");
     background-size: cover;
     position: absolute;
-    right: 0.75rem;
-    top: 0.75rem;
+    right: 1rem;
+    top: 0.9rem;
     }
     .tlt .navbar {
     --nav-logo-h: 40px;
@@ -2462,11 +2503,14 @@
         }
     });
     </script>
-    <dialog class="dialog" data-dialog-id="1">
+    <dialog class="dialog" data-dialog-id="1" id="statusDialog">
         <button class="dialog-close close-overlay" data-dialog-id="1">close</button>
         <div class="dialog-card">
             <div class="dialog-card-body">
-                Lorem ipsum dolor sit amet consectetur adipisicing elit. Accusantium illum veritatis est modi perspiciatis! Ducimus pariatur debitis dignissimos culpa quaerat rerum doloribus optio. Eligendi ipsum provident ex aliquam earum unde.
+                <p id="statusDialogMessage"></p>
+            </div>
+            <div class="dialog-card-footer">
+                <button class="dialog-primary" type="button" id="statusDialogConfirm">ຕົກລົງ</button>
             </div>
             <button class="dialog-close" type="button" data-dialog-id="1">close</button>
         </div>
@@ -2491,7 +2535,11 @@
             button.addEventListener("click", () => {
                 const id = button.dataset.dialogId;
                 const dialog = document.querySelector(`.dialog[data-dialog-id="${id}"]`);
-                dialog?.show();
+                if (typeof dialog?.showModal === "function") {
+                    dialog.showModal();
+                } else {
+                    dialog?.show();
+                }
             });
         });
 
@@ -2508,6 +2556,46 @@
                 openedDialog?.close();
             }
         });
+
+        const statusDialog = document.getElementById("statusDialog");
+        const statusDialogMessage = document.getElementById("statusDialogMessage");
+        const statusDialogConfirm = document.getElementById("statusDialogConfirm");
+        let statusDialogOnClose = null;
+
+        statusDialogConfirm?.addEventListener("click", () => {
+            statusDialog?.close();
+        });
+
+        statusDialog?.addEventListener("close", () => {
+            if (typeof statusDialogOnClose === "function") {
+                const callback = statusDialogOnClose;
+                statusDialogOnClose = null;
+                callback();
+            }
+        });
+
+        window.showStatusDialog = ({ title, message, confirmText, onClose } = {}) => {
+            if (!statusDialog || !statusDialogMessage || !statusDialogConfirm) {
+                if (message) window.alert(message);
+                if (typeof onClose === "function") onClose();
+                return;
+            }
+
+            if (statusDialog.open) {
+                statusDialogOnClose = null;
+                statusDialog.close();
+            }
+
+            statusDialogMessage.textContent = message || "";
+            statusDialogConfirm.textContent = confirmText || "ຕົກລົງ";
+            statusDialogOnClose = typeof onClose === "function" ? onClose : null;
+
+            if (typeof statusDialog.showModal === "function") {
+                statusDialog.showModal();
+            } else {
+                statusDialog.show();
+            }
+        };
     </script>
     <script src="https://cdn.jsdelivr.net/npm/jsencrypt@3.3.2/bin/jsencrypt.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.1.1/crypto-js.min.js"></script>
@@ -2515,6 +2603,7 @@
     document.addEventListener("DOMContentLoaded", () => {
         const API_URL = "https://sgapi.isgfin.com/v1/activity/toplot";
         const REDIRECT_URL = "https://my.fisg.com/competition/active";
+        const REGISTER_URL = "https://my.fisg.com/register";
         const form = document.getElementById("joinForm");
         const submitBtn = document.getElementById("submitBtn");
         const rankList = document.querySelector(".tlt-rank-list");
@@ -2527,11 +2616,15 @@
         const messages = {
             loading: "ກຳລັງສົ່ງ...",
             submit: "ລົງທະບຽນ",
-            success: "ລົງທະບຽນສຳເລັດແລ້ວ",
+            dialogTitle: "ແຈ້ງເຕືອນ",
+            dialogConfirm: "ຕົກລົງ",
+            joinedSuccess: "ທ່ານໄດ້ເຂົ້າຮ່ວມການແຂ່ງຂັນນີ້ແລ້ວ",
+            joinedRedirect: "ທ່ານຍັງບໍ່ທັນໄດ້ເຂົ້າຮ່ວມການແຂ່ງຂັນນີ້. ກົດຕົກລົງເພື່ອໄປຫາໜ້າສະໝັກເຂົ້າຮ່ວມ",
             missingEmail: "ກະລຸນາກອກອີເມວ",
             requestFailed: "ບໍ່ສາມາດດຳເນີນການໄດ້ ກະລຸນາລອງໃໝ່",
             invalidResponse: "ບໍ່ສາມາດກວດສອບສະຖານະການລົງທະບຽນໄດ້ ກະລຸນາລອງໃໝ່",
             alreadyJoined: "ທ່ານໄດ້ລົງທະບຽນໄວ້ແລ້ວ",
+            userNotFound: "ອີເມວນີ້ຍັງບໍ່ມີບັນຊີກັບ FISG. ກະລຸນາສະໝັກສະມາຊິກ ແລະ ເປີດບັນຊີກ່ອນເຂົ້າຮ່ວມກິດຈະກຳ",
             noRanking: "ບໍ່ມີຂໍ້ມູນ"
         };
 
@@ -2672,7 +2765,11 @@
                 const formData = new FormData(form);
                 const email = String(formData.get("email") || "").trim();
                 if (!email) {
-                    window.alert(messages.missingEmail);
+                    window.showStatusDialog({
+                        title: messages.dialogTitle,
+                        message: messages.missingEmail,
+                        confirmText: messages.dialogConfirm
+                    });
                     return;
                 }
 
@@ -2698,32 +2795,66 @@
                         result = {};
                     }
 
+                    const apiCode = String(result.code || result?.data?.code || "").toUpperCase();
+                    const apiMessage = String(result.msg || result.message || "");
+                    const msgLower = apiMessage.toLowerCase();
+
+                    if (apiCode === "USER_NOT_FOUND" || msgLower.includes("user not found")) {
+                        window.showStatusDialog({
+                            title: messages.dialogTitle,
+                            message: messages.userNotFound,
+                            confirmText: messages.dialogConfirm,
+                            onClose: () => {
+                                window.location.href = REGISTER_URL;
+                            }
+                        });
+                        return;
+                    }
+
                     if (!res.ok) {
-                        throw new Error(result.msg || result.message || messages.requestFailed);
+                        throw new Error(apiMessage || messages.requestFailed);
                     }
 
                     const joined = result?.data?.joined ?? result?.joined;
                     if (joined === false) {
-                        window.location.href = REDIRECT_URL;
+                        window.showStatusDialog({
+                            title: messages.dialogTitle,
+                            message: messages.joinedRedirect,
+                            confirmText: messages.dialogConfirm,
+                            onClose: () => {
+                                window.location.href = REDIRECT_URL;
+                            }
+                        });
                         return;
                     }
 
                     if (joined === true) {
                         form.reset();
-                        window.alert(messages.success);
+                        window.showStatusDialog({
+                            title: messages.dialogTitle,
+                            message: messages.joinedSuccess,
+                            confirmText: messages.dialogConfirm
+                        });
                         await loadRanking();
                         return;
                     }
 
-                    const msgLower = String(result.msg || result.message || "").toLowerCase();
                     if (msgLower.includes("already") || msgLower.includes("joined")) {
-                        window.alert(messages.alreadyJoined);
+                        window.showStatusDialog({
+                            title: messages.dialogTitle,
+                            message: messages.alreadyJoined,
+                            confirmText: messages.dialogConfirm
+                        });
                         return;
                     }
 
                     throw new Error(messages.invalidResponse);
                 } catch (error) {
-                    window.alert(error.message || messages.requestFailed);
+                    window.showStatusDialog({
+                        title: messages.dialogTitle,
+                        message: error.message || messages.requestFailed,
+                        confirmText: messages.dialogConfirm
+                    });
                 } finally {
                     if (submitBtn) {
                         submitBtn.disabled = false;

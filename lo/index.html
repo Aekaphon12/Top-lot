@@ -2610,15 +2610,15 @@
         const formatLots = (value) => {
             if (value === undefined || value === null || value === "") return "Lots";
             if (typeof value === "number") {
-                return value.toLocaleString("en-US", { maximumFractionDigits: 2 });
+                return `${value.toLocaleString("en-US", { maximumFractionDigits: 2 })} Lots`;
             }
 
             const num = Number(String(value).replace(/,/g, ""));
             if (!Number.isNaN(num) && String(value).trim() !== "") {
-                return num.toLocaleString("en-US", { maximumFractionDigits: 2 });
+                return `${num.toLocaleString("en-US", { maximumFractionDigits: 2 })} Lots`;
             }
 
-            return String(value);
+            return `${String(value)} Lots`;
         };
 
         const createRankNo = (rank) => {
@@ -2649,7 +2649,7 @@
             entries.slice(0, 50).forEach((item, index) => {
                 const rank = Number(pickValue(item, ["rank", "no", "position", "index"], index + 1)) || index + 1;
                 const name = formatRankName(pickValue(item, ["account", "email", "login", "name", "username", "member"], ""));
-                const lots = formatLots(pickValue(item, ["lots", "lot", "volume", "total_lots", "totalLots", "score"], ""));
+                const lots = formatLots(pickValue(item, ["value", "lots", "lot", "volume", "total_lots", "totalLots", "score"], ""));
 
                 const li = document.createElement("li");
                 li.className = "tlt-rank-item";

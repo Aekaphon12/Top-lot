@@ -1066,6 +1066,7 @@
     }
     .tlt .dialog-card-body p {
     margin: 0;
+    white-space: pre-line;
     }
     .tlt .dialog-card-footer {
     margin-top: 1.25rem;
@@ -2555,6 +2556,10 @@
             requestFailed: "ບໍ່ສາມາດດຳເນີນການໄດ້ ກະລຸນາລອງໃໝ່",
             invalidResponse: "ບໍ່ສາມາດກວດສອບສະຖານະການລົງທະບຽນໄດ້ ກະລຸນາລອງໃໝ່",
             alreadyJoined: "ທ່ານໄດ້ລົງທະບຽນໄວ້ແລ້ວ",
+            accountLabel: "ບັນຊີເທຣດ",
+            eligibleLotsLabel: "ຈຳນວນ lots ທີ່ນັບໄດ້",
+            joinTimeLabel: "ເວລາເຂົ້າຮ່ວມ",
+            lastUpdateLabel: "ອັບເດດຫຼ້າສຸດ",
             userNotFound: "ອີເມວນີ້ຍັງບໍ່ມີບັນຊີກັບ FISG. ກະລຸນາສະໝັກສະມາຊິກ ແລະ ເປີດບັນຊີກ່ອນເຂົ້າຮ່ວມກິດຈະກຳ",
             noRanking: "ບໍ່ມີຂໍ້ມູນ"
         };
@@ -2619,6 +2624,68 @@
             }
 
             return `${String(value)} Lots`;
+        };
+
+        const formatDateTime = (value) => {
+            if (!value) return "-";
+
+            const date = new Date(value);
+            if (!Number.isNaN(date.getTime())) {
+                return date.toLocaleString("en-GB", {
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit"
+                });
+            }
+
+            return String(value);
+        };
+
+        const buildJoinedDetailsMessage = (payload) => {
+            const account = pickValue(payload, ["account", "login", "member", "username"], "-");
+            const eligibleLots = formatLots(pickValue(payload, ["eligible_lots", "eligibleLots", "value", "lots", "lot", "volume", "total_lots", "totalLots", "score"], ""));
+            const joinTime = formatDateTime(pickValue(payload, ["join_time", "joinTime", "created_at", "createdAt"], ""));
+            const lastUpdate = formatDateTime(pickValue(payload, ["last_update", "lastUpdate", "updated_at", "updatedAt"], ""));
+
+            return [
+                messages.alreadyJoined,
+                `${messages.accountLabel}: ${account || "-"}`,
+                `${messages.eligibleLotsLabel}: ${eligibleLots}`,
+                `${messages.joinTimeLabel}: ${joinTime}`,
+                `${messages.lastUpdateLabel}: ${lastUpdate}`
+            ].join("\n");
+        };
+
+        const getJoinedPayload = (payload) => {
+            if (!payload || typeof payload !== "object") return {};
+
+            const candidates = [
+                payload,
+                payload.data,
+                payload.result,
+                payload.record
+            ];
+
+            for (const candidate of candidates) {
+                if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) continue;
+
+                const hasJoinedFields = [
+                    "account",
+                    "eligible_lots",
+                    "eligibleLots",
+                    "join_time",
+                    "joinTime",
+                    "last_update",
+                    "lastUpdate"
+                ].some((key) => candidate[key] !== undefined && candidate[key] !== null && candidate[key] !== "");
+
+                if (hasJoinedFields) return candidate;
+            }
+
+            return payload;
         };
 
         const createRankNo = (rank) => {
@@ -2746,6 +2813,7 @@
                         throw new Error(apiMessage || messages.requestFailed);
                     }
 
+                    const joinedPayload = getJoinedPayload(result?.data && typeof result.data === "object" ? result.data : result);
                     const joined = result?.data?.joined ?? result?.joined;
                     if (joined === false) {
                         window.showStatusDialog({
@@ -2763,7 +2831,7 @@
                         form.reset();
                         window.showStatusDialog({
                             title: messages.dialogTitle,
-                            message: messages.joinedSuccess,
+                            message: buildJoinedDetailsMessage(joinedPayload),
                             confirmText: messages.dialogConfirm
                         });
                         await loadRanking();
@@ -2773,7 +2841,7 @@
                     if (msgLower.includes("already") || msgLower.includes("joined")) {
                         window.showStatusDialog({
                             title: messages.dialogTitle,
-                            message: messages.alreadyJoined,
+                            message: buildJoinedDetailsMessage(joinedPayload),
                             confirmText: messages.dialogConfirm
                         });
                         return;
